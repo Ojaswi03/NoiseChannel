@@ -66,8 +66,8 @@ def centralized_training(num_epochs=20, lr=0.01, lambd=0.01, binary=True):
         loss = hinge_loss(w, X_train, y_train_bin, lambd)
         run.log({
             "epoch": epoch + 1,
-            "train_accuracy": train_acc,
-            "loss": loss
+            "Centralized/train_accuracy": train_acc,
+            "centralized/loss": loss
         })
 
         train_accs.append(train_acc)
