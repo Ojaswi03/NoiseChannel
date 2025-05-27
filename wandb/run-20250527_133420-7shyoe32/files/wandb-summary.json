@@ -1,0 +1,1 @@
+{"_runtime":29.297490161,"_step":149,"epoch":50,"EBM/accuracy":0.8497142857142858,"centralized/loss":0.24961979765087744,"_timestamp":1.7483672896507795e+09,"FedAvg/loss":0.3748370490558526,"round":50,"FedAvg/accuracy":0.8493571428571428,"Centralized/train_accuracy":0.8508035714285714,"EBM/loss":0.37288148265666654,"_wandb":{"runtime":35}}

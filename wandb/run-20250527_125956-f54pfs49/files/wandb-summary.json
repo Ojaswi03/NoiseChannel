@@ -1,0 +1,1 @@
+{"round":50,"_wandb":{"runtime":39},"Centralized/train_accuracy":0.8512857142857143,"FedAvg/accuracy":0.8477857142857143,"EBM/accuracy":0.8497142857142858,"centralized/loss":0.24980473579712495,"EBM/loss":0.37288148265666654,"epoch":50,"_runtime":32.284764702,"FedAvg/loss":0.37490690195227844,"_timestamp":1.7483652289021401e+09,"_step":149}

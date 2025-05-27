@@ -2,7 +2,6 @@
 
 import numpy as np
 from data.mnist import load_mnist
-from data.cifar10 import load_cifar10
 from sklearn.metrics import accuracy_score
 import wandb
 # Initialize Weights & Biases
@@ -34,8 +33,7 @@ def smooth_curve(values, alpha=0.3):
     return smoothed
 
 
-
-def federated_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=0.0, binary=True, dataset="mnist"):
+def federated_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=0.0, binary=True, dataset="mnist", smooth=False, alpha=0.3):
     """
     Simulate Federated Averaging (FedAvg) with optional noise on model transmission.
 
@@ -46,26 +44,20 @@ def federated_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=
         lambd (float): L2 regularization.
         sigma (float): Stddev of Gaussian noise added to local models.
         binary (bool): Even-vs-odd conversion flag.
+        smooth (bool): If True, applies exponential smoothing to output.
+        alpha (float): Smoothing factor if smoothing is enabled.
 
     Returns:
         w_global: Final global model.
-        accs, losses: Accuracy and loss history.
+        accs, losses: Accuracy and loss history (optionally smoothed).
     """
     print("[INFO] Loading dataset...")
     if dataset == "mnist":
         X_train, X_test, y_train, y_test = load_mnist(binary=binary)
         y_train_bin = 2 * y_train - 1
         y_test_bin = 2 * y_test - 1
-    elif dataset == "cifar10":
-        X_train, X_test, y_train, y_test = load_cifar10(binary=binary)
-        y_train_bin = y_train
-        y_test_bin = y_test
     else:
         raise ValueError("Unsupported dataset: " + dataset)
-    
-    
-    # y_train_bin = 2 * y_train - 1
-    # y_test_bin = 2 * y_test - 1
 
     n_samples, n_features = X_train.shape
     w_global = np.zeros(n_features)
@@ -85,14 +77,11 @@ def federated_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=
             X_local, y_local = splits_X[i], splits_y[i]
             w_local = local_update(X_local, y_local, w_global, lr, lambd)
 
-            # Add communication noise if specified
+            # Add communication noise
             if sigma > 0:
-                # noise = np.random.normal(0, sigma, size=w_local.shape)
-                # w_local += noise
-                
                 delta = np.random.randn(*w_local.shape)
-                delta /= max(np.linalg.norm(delta), 1e-8)  # Normalize to unit norm
-                delta *= sigma * 1.2  # Scale by sigma other values can be 1.2, 1.3, etc.
+                delta /= max(np.linalg.norm(delta), 1e-8)  # Normalize
+                delta *= sigma * 1.2  # Scale
                 w_local += delta
 
             local_weights.append(w_local)
@@ -104,7 +93,7 @@ def federated_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=
         preds = np.sign(X_test @ w_global)
         acc = accuracy_score(y_test_bin, preds)
         loss = hinge_loss(w_global, X_train, y_train_bin, lambd)
-        
+
         wandb.log({
             "round": round + 1,
             "FedAvg/accuracy": acc,
@@ -113,8 +102,11 @@ def federated_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=
 
         accs.append(acc)
         losses.append(loss)
-        accs = smooth_curve(accs, alpha=0.3)
-        losses = smooth_curve(losses, alpha=0.3)
         print(f"[Round {round+1}] Test Acc: {acc:.4f}, Loss: {loss:.4f}")
+
+    # Optional smoothing for plotting (not used internally or for wandb)
+    if smooth:
+        accs = smooth_curve(accs, alpha=alpha)
+        losses = smooth_curve(losses, alpha=alpha)
 
     return w_global, accs, losses

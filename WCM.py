@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.metrics import accuracy_score
-from data.cifar10 import load_cifar10
+from data.mnist import load_mnist
 import wandb
 
 def hinge_loss(w, X, y, lambd):
@@ -40,31 +40,27 @@ def aggregate_weights(weights, sizes):
     return sum(w * (sz / total) for w, sz in zip(weights, sizes))
 
 
-def wcm_training(num_clients=10,
-                 num_rounds=50,
-                 lr=0.05,
-                 lambd=0.01,
-                 sigma=0.1,
-                 binary=True,
-                 alpha=0.7,
-                 beta=0.6):
+def wcm_training(num_clients=10,num_rounds=50,lr=0.1,lambd=0.01,sigma=0.05,  binary=True,alpha=0.7,beta=0.6):
     """
-    Worst-Case Model training for robust federated learning on CIFAR-10.
+    Worst-Case Model training for robust federated learning on MNIST.
 
     Returns:
         w_global: final model weights
         accs: list of test accuracies per round
         losses: list of hinge loss values per round
     """
-    print("[INFO] Loading CIFAR-10 dataset...")
-    X_train, X_test, y_train, y_test = load_cifar10(binary=binary)
+    print("[INFO] Loading MNIST dataset...")
+    X_train, X_test, y_train, y_test = load_mnist(binary=binary)
 
-    # Convert labels to {-1, +1} already done in load_cifar10
-    # y_train = 2 * y_train - 1
-    # y_test = 2 * y_test - 1
+    # Convert labels to {-1, +1}
+    y_train = 2 * y_train - 1
+    y_test = 2 * y_test - 1
 
     n_samples, n_features = X_train.shape
-    w_global = np.random.normal(0, 0.01, size=n_features)
+    w_global = np.zeros(n_features)
+    
+    # Initialize global model weights for EBM
+    # w_global = np.random.normal(0, 0.01, size=n_features)
 
     print("[INFO] Partitioning data across clients...")
     indices = np.random.permutation(n_samples)
