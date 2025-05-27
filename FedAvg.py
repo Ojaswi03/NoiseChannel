@@ -53,15 +53,19 @@ def federated_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=
     """
     print("[INFO] Loading dataset...")
     if dataset == "mnist":
-        from data.mnist import load_mnist
         X_train, X_test, y_train, y_test = load_mnist(binary=binary)
+        y_train_bin = 2 * y_train - 1
+        y_test_bin = 2 * y_test - 1
     elif dataset == "cifar10":
-        from data.cifar10 import load_cifar10
         X_train, X_test, y_train, y_test = load_cifar10(binary=binary)
+        y_train_bin = y_train
+        y_test_bin = y_test
     else:
         raise ValueError("Unsupported dataset: " + dataset)
-    y_train_bin = 2 * y_train - 1
-    y_test_bin = 2 * y_test - 1
+    
+    
+    # y_train_bin = 2 * y_train - 1
+    # y_test_bin = 2 * y_test - 1
 
     n_samples, n_features = X_train.shape
     w_global = np.zeros(n_features)
@@ -83,8 +87,13 @@ def federated_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=
 
             # Add communication noise if specified
             if sigma > 0:
-                noise = np.random.normal(0, sigma, size=w_local.shape)
-                w_local += noise
+                # noise = np.random.normal(0, sigma, size=w_local.shape)
+                # w_local += noise
+                
+                delta = np.random.randn(*w_local.shape)
+                delta /= max(np.linalg.norm(delta), 1e-8)  # Normalize to unit norm
+                delta *= sigma * 1.2  # Scale by sigma other values can be 1.2, 1.3, etc.
+                w_local += delta
 
             local_weights.append(w_local)
 

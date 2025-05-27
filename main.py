@@ -90,7 +90,7 @@ def main():
     binary = input("Binary classification (cat/dog or even/odd)? [y/n]: ").strip().lower() == 'y'
 
     if dataset == "mnist":
-        run_mnist(rounds, lr, lambd, sigma, num_clients, binary, )
+        run_mnist(rounds, lr, lambd, sigma, num_clients, binary)
     elif dataset == "cifar10":
         run_cifar(rounds, lr, lambd, sigma, num_clients, binary)
     else:

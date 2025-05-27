@@ -59,9 +59,9 @@ def wcm_training(num_clients=10,
     print("[INFO] Loading CIFAR-10 dataset...")
     X_train, X_test, y_train, y_test = load_cifar10(binary=binary)
 
-    # Convert labels to {-1, +1}
-    y_train = 2 * y_train - 1
-    y_test = 2 * y_test - 1
+    # Convert labels to {-1, +1} already done in load_cifar10
+    # y_train = 2 * y_train - 1
+    # y_test = 2 * y_test - 1
 
     n_samples, n_features = X_train.shape
     w_global = np.random.normal(0, 0.01, size=n_features)

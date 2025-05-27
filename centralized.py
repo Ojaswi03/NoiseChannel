@@ -2,9 +2,10 @@
 
 import numpy as np
 from data.mnist import load_mnist
+from data.cifar10 import load_cifar10
 from sklearn.metrics import accuracy_score
 import wandb
-# Initialize Weights & Biases
+
 
 def hinge_loss(w, X, y, lambd):
     """Compute hinge loss + L2 regularization"""
@@ -37,10 +38,8 @@ def centralized_training(num_epochs=20, lr=0.01, lambd=0.01, binary=True, datase
     """
     print("[INFO] Loading dataset...")
     if dataset == "mnist":
-        from data.mnist import load_mnist
         X_train, X_test, y_train, y_test = load_mnist(binary=binary)
     elif dataset == "cifar10":
-        from data.cifar10 import load_cifar10
         X_train, X_test, y_train, y_test = load_cifar10(binary=binary)
     else:
         raise ValueError("Unsupported dataset: " + dataset)
@@ -53,8 +52,15 @@ def centralized_training(num_epochs=20, lr=0.01, lambd=0.01, binary=True, datase
 
 
     # Convert labels to {-1, +1}
-    y_train_bin = 2 * y_train - 1
-    y_test_bin = 2 * y_test - 1
+    if dataset == "mnist":
+        y_train_bin = 2 * y_train - 1
+        y_test_bin = 2 * y_test - 1
+    else:
+        y_train_bin = y_train
+        y_test_bin = y_test
+
+    # y_train_bin = 2 * y_train - 1
+    # y_test_bin = 2 * y_test - 1
 
     train_accs, test_accs, losses = [], [], []
 

@@ -24,7 +24,7 @@ def load_cifar10(test_size=0.2, random_state=42, normalize=True, binary=True, fl
 
     if binary:
         print("[INFO] Converting labels to binary (cat/dog = 1, others = 0)")
-        y = np.array([1 if label in [3, 5] else 0 for label in y])  # 3=cat, 5=dog
+        y = np.array([1 if label in [3, 5] else -1 for label in y])  # 3=cat, 5=dog
 
     if normalize:
         X = X.astype(np.float32) / 255.0
