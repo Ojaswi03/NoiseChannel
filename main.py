@@ -13,10 +13,10 @@ run = wandb.init(
 
 def run_mnist(rounds, lr, lambd, sigma, num_clients, binary=True):
     print("\n[MNIST] Running Centralized Training")
-    _, c_accs, _, c_losses = centralized_training(rounds, lr, lambd, binary)
+    _, c_accs, _, c_losses = centralized_training(rounds, lr, lambd, binary, dataset="mnist")
 
     print("\n[MNIST] Running FedAvg")
-    _, f_accs, f_losses = federated_training(num_clients, rounds, lr, lambd, sigma, binary)
+    _, f_accs, f_losses = federated_training(num_clients, rounds, lr, lambd, sigma, binary, dataset="mnist")
 
     print("\n[MNIST] Running EBM")
     _, e_accs, e_losses = ebm_training(num_clients, rounds, lr, lambd, sigma, binary)
@@ -31,7 +31,7 @@ def run_cifar(rounds, lr, lambd, sigma, num_clients, binary=True):
     _, f_accs, f_losses = federated_training(num_clients, rounds, lr, lambd, sigma, binary, dataset="cifar10")
 
     print("\n[CIFAR-10] Running WCM")
-    _, w_accs, w_losses = wcm_training(num_clients, rounds, lr, lambd, sigma, binary, dataset="cifar10")
+    _, w_accs, w_losses = wcm_training(num_clients, rounds, lr, lambd, sigma, binary)
 
     plot_results(c_accs, f_accs, w_accs, c_losses, f_losses, w_losses, "cifar10", "diagram-cifar")
 
@@ -90,9 +90,11 @@ def main():
     binary = input("Binary classification (cat/dog or even/odd)? [y/n]: ").strip().lower() == 'y'
 
     if dataset == "mnist":
-        run_mnist(rounds, lr, lambd, sigma, num_clients, binary)
-    else:
+        run_mnist(rounds, lr, lambd, sigma, num_clients, binary, )
+    elif dataset == "cifar10":
         run_cifar(rounds, lr, lambd, sigma, num_clients, binary)
+    else:
+        raise ValueError("Unsupported dataset: " + dataset)
     run.finish()
 
 if __name__ == "__main__":

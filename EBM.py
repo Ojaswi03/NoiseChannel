@@ -5,10 +5,7 @@ from data.mnist import load_mnist
 from sklearn.metrics import accuracy_score
 import wandb
 # Initialize Weights & Biases
-run = wandb.init(
-    project="Nosiy Federated Learning",
-    entity="ojaswisinha2001-ohio-university"
-)
+
 
 def hinge_loss(w, X, y, lambd):
     margins = 1 - y * (X @ w)
@@ -79,7 +76,7 @@ def ebm_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=0.1, b
         preds = np.sign(X_test @ w_global)
         acc = accuracy_score(y_test_bin, preds)
         loss = hinge_loss(w_global, X_train, y_train_bin, lambd)
-        run.log({
+        wandb.log({
             "round": round + 1,
             "EBM/accuracy": acc,
             "EBM/loss": loss

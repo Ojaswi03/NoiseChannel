@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Core parameters that main.py expects
-dataset="mnist"  # minist
-num_epochs=35 # 35 for mnist
+dataset="cifar10"  # minist, cifar10
+num_epochs=50 # 35 for mnist
 lr=0.05 # 0.01 for mnist
 lambda=0.001 # 0.001 for mnist
 sigma=0.1 # 0.1 for mnist

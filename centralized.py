@@ -5,10 +5,7 @@ from data.mnist import load_mnist
 from sklearn.metrics import accuracy_score
 import wandb
 # Initialize Weights & Biases
-run = wandb.init(
-    project="Nosiy Federated Learning",
-    entity="ojaswisinha2001-ohio-university"
-)
+
 def hinge_loss(w, X, y, lambd):
     """Compute hinge loss + L2 regularization"""
     margins = 1 - y * (X @ w)
@@ -24,7 +21,7 @@ def compute_gradient(w, X, y, lambd):
     grad = -np.mean((indicator * y)[:, np.newaxis] * X, axis=0) + 2 * lambd * w
     return grad
 
-def centralized_training(num_epochs=20, lr=0.01, lambd=0.01, binary=True):
+def centralized_training(num_epochs=20, lr=0.01, lambd=0.01, binary=True, dataset="mnist"):
     """
     Centralized training of a linear SVM using hinge loss from scratch.
 
@@ -38,8 +35,16 @@ def centralized_training(num_epochs=20, lr=0.01, lambd=0.01, binary=True):
         w: Final model weights.
         train_accs, test_accs, losses: Metrics per epoch.
     """
-    print("[INFO] Loading MNIST dataset...")
-    X_train, X_test, y_train, y_test = load_mnist(binary=binary)
+    print("[INFO] Loading dataset...")
+    if dataset == "mnist":
+        from data.mnist import load_mnist
+        X_train, X_test, y_train, y_test = load_mnist(binary=binary)
+    elif dataset == "cifar10":
+        from data.cifar10 import load_cifar10
+        X_train, X_test, y_train, y_test = load_cifar10(binary=binary)
+    else:
+        raise ValueError("Unsupported dataset: " + dataset)
+
 
     print("[INFO] Initializing model...")
     n_features = X_train.shape[1]
@@ -64,7 +69,7 @@ def centralized_training(num_epochs=20, lr=0.01, lambd=0.01, binary=True):
         train_acc = accuracy_score(y_train_bin, train_preds)
         test_acc = accuracy_score(y_test_bin, test_preds)
         loss = hinge_loss(w, X_train, y_train_bin, lambd)
-        run.log({
+        wandb.log({
             "epoch": epoch + 1,
             "Centralized/train_accuracy": train_acc,
             "centralized/loss": loss

@@ -2,13 +2,10 @@
 
 import numpy as np
 from data.mnist import load_mnist
+from data.cifar10 import load_cifar10
 from sklearn.metrics import accuracy_score
 import wandb
 # Initialize Weights & Biases
-run = wandb.init(
-    project="Nosiy Federated Learning",
-    entity="ojaswisinha2001-ohio-university"
-)
 
 def hinge_loss(w, X, y, lambd):
     margins = 1 - y * (X @ w)
@@ -38,7 +35,7 @@ def smooth_curve(values, alpha=0.3):
 
 
 
-def federated_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=0.0, binary=True):
+def federated_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=0.0, binary=True, dataset="mnist"):
     """
     Simulate Federated Averaging (FedAvg) with optional noise on model transmission.
 
@@ -54,8 +51,15 @@ def federated_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=
         w_global: Final global model.
         accs, losses: Accuracy and loss history.
     """
-    print("[INFO] Loading data and partitioning...")
-    X_train, X_test, y_train, y_test = load_mnist(binary=binary)
+    print("[INFO] Loading dataset...")
+    if dataset == "mnist":
+        from data.mnist import load_mnist
+        X_train, X_test, y_train, y_test = load_mnist(binary=binary)
+    elif dataset == "cifar10":
+        from data.cifar10 import load_cifar10
+        X_train, X_test, y_train, y_test = load_cifar10(binary=binary)
+    else:
+        raise ValueError("Unsupported dataset: " + dataset)
     y_train_bin = 2 * y_train - 1
     y_test_bin = 2 * y_test - 1
 
@@ -92,7 +96,7 @@ def federated_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=
         acc = accuracy_score(y_test_bin, preds)
         loss = hinge_loss(w_global, X_train, y_train_bin, lambd)
         
-        run.log({
+        wandb.log({
             "round": round + 1,
             "FedAvg/accuracy": acc,
             "FedAvg/loss": loss

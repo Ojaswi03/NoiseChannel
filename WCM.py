@@ -1,16 +1,12 @@
 import numpy as np
-from data.mnist import load_mnist
 from sklearn.metrics import accuracy_score
+from data.cifar10 import load_cifar10
 import wandb
-# Initialize Weights & Biases
-run = wandb.init(
-    project="Nosiy Federated Learning",
-    entity="ojaswisinha2001-ohio-university"
-)
 
 def hinge_loss(w, X, y, lambd):
     margins = 1 - y * (X @ w)
     return np.mean(np.maximum(0, margins)) + lambd * np.sum(w ** 2)
+
 
 def compute_gradient(w, X, y, lambd):
     margins = 1 - y * (X @ w)
@@ -18,59 +14,86 @@ def compute_gradient(w, X, y, lambd):
     grad = -np.mean((active * y)[:, np.newaxis] * X, axis=0) + 2 * lambd * w
     return grad
 
-def local_wcm_update(w_t, X, y, lambd, sigma, rho, gamma, prev_g, loss_type="hinge"):
-    # Estimate gradient
+
+def local_wcm_update(w_t, X, y, lambd, sigma, rho, gamma, prev_g):
+    # Compute current gradient
     grad = compute_gradient(w_t, X, y, lambd)
 
-    # Inner surrogate loss (linearized)
-    surrogate = rho * grad + (1 - rho) * prev_g + 2 * lambd * (w_t - w_t)
-    w_local = w_t - gamma * surrogate
+    # Surrogate linearized gradient (SCA step)
+    surrogate_grad = rho * grad + (1 - rho) * prev_g
+    w_intermediate = w_t - gamma * surrogate_grad
 
-    # Worst-case noise injection (bounded norm <= sigma)
-    delta = sigma * np.random.randn(*w_local.shape)
-    delta = delta / max(np.linalg.norm(delta), 1e-12) * sigma
-    w_local_noisy = w_local + delta
+    # Worst-case bounded adversarial noise (unit norm scaled to σ)
+    noise = np.random.randn(*w_t.shape)
+    noise /= max(np.linalg.norm(noise), 1e-12)
+    noise *= sigma
 
-    # Update local model
-    new_g = compute_gradient(w_local_noisy, X, y, lambd)
-    return w_local_noisy, new_g
+    # Apply noise
+    w_local = w_intermediate + noise
+    new_grad = compute_gradient(w_local, X, y, lambd)
+
+    return w_local, new_grad
+
 
 def aggregate_weights(weights, sizes):
     total = np.sum(sizes)
     return sum(w * (sz / total) for w, sz in zip(weights, sizes))
 
-def wcm_training(num_clients=5, num_rounds=35, lr=0.05, lambd=0.01, sigma=0.01,
-                 binary=True, alpha=0.7, beta=0.6):
-    print("[INFO] Loading data...")
-    X_train, X_test, y_train, y_test = load_mnist(binary=binary)
-    y_train_bin = 2 * y_train - 1
-    y_test_bin = 2 * y_test - 1
+
+def wcm_training(num_clients=10,
+                 num_rounds=50,
+                 lr=0.05,
+                 lambd=0.01,
+                 sigma=0.1,
+                 binary=True,
+                 alpha=0.7,
+                 beta=0.6):
+    """
+    Worst-Case Model training for robust federated learning on CIFAR-10.
+
+    Returns:
+        w_global: final model weights
+        accs: list of test accuracies per round
+        losses: list of hinge loss values per round
+    """
+    print("[INFO] Loading CIFAR-10 dataset...")
+    X_train, X_test, y_train, y_test = load_cifar10(binary=binary)
+
+    # Convert labels to {-1, +1}
+    y_train = 2 * y_train - 1
+    y_test = 2 * y_test - 1
 
     n_samples, n_features = X_train.shape
     w_global = np.random.normal(0, 0.01, size=n_features)
 
+    print("[INFO] Partitioning data across clients...")
     indices = np.random.permutation(n_samples)
-    splits_X = np.array_split(X_train[indices], num_clients)
-    splits_y = np.array_split(y_train_bin[indices], num_clients)
-    sizes = [len(x) for x in splits_X]
-
+    X_splits = np.array_split(X_train[indices], num_clients)
+    y_splits = np.array_split(y_train[indices], num_clients)
+    sizes = [len(X) for X in X_splits]
     grads = [np.zeros(n_features) for _ in range(num_clients)]
 
     accs, losses = [], []
 
-    print("[INFO] Starting WCM training...")
+    print("[INFO] Starting Worst-Case Model training...")
     for t in range(1, num_rounds + 1):
-        gamma_t = 1.0 / (t ** alpha)
+        gamma_t = lr / (t ** alpha)
         rho_t = 1.0 / (t ** beta)
 
         local_models = []
         new_grads = []
 
         for i in range(num_clients):
-            X_local, y_local = splits_X[i], splits_y[i]
+            X_local, y_local = X_splits[i], y_splits[i]
             w_new, g_new = local_wcm_update(
-                w_global, X_local, y_local, lambd, sigma,
-                rho=rho_t, gamma=gamma_t, prev_g=grads[i]
+                w_t=w_global,
+                X=X_local,
+                y=y_local,
+                lambd=lambd,
+                sigma=sigma,
+                rho=rho_t,
+                gamma=gamma_t,
+                prev_g=grads[i]
             )
             local_models.append(w_new)
             new_grads.append(g_new)
@@ -78,12 +101,10 @@ def wcm_training(num_clients=5, num_rounds=35, lr=0.05, lambd=0.01, sigma=0.01,
         w_global = aggregate_weights(local_models, sizes)
         grads = new_grads
 
-        # Evaluation
         preds = np.sign(X_test @ w_global)
-        acc = accuracy_score(y_test_bin, preds)
-        loss = hinge_loss(w_global, X_train, y_train_bin, lambd)
-        
-        run.log({
+        acc = accuracy_score(y_test, preds)
+        loss = hinge_loss(w_global, X_train, y_train, lambd)
+        wandb.log({
             "round": t,
             "WCM/accuracy": acc,
             "WCM/loss": loss
@@ -92,6 +113,6 @@ def wcm_training(num_clients=5, num_rounds=35, lr=0.05, lambd=0.01, sigma=0.01,
         accs.append(acc)
         losses.append(loss)
 
-        print(f"[Round {t}] Test Accuracy: {acc:.4f}, Loss: {loss:.4f}")
+        print(f"[Round {t:2d}] Test Accuracy: {acc:.4f} | Train Loss: {loss:.4f}")
 
     return w_global, accs, losses
