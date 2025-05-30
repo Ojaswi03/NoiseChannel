@@ -4,7 +4,6 @@ import numpy as np
 from data.mnist import load_mnist
 from sklearn.metrics import accuracy_score
 import wandb
-# Initialize Weights & Biases
 
 def hinge_loss(w, X, y, lambd):
     margins = 1 - y * (X @ w)
