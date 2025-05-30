@@ -42,9 +42,9 @@ def plot_results(c_acc, f_acc, alt_acc, c_loss, f_loss, alt_loss, dataset, out_d
     c_loss = c_loss[:min_len]
     f_loss = f_loss[:min_len]
     alt_loss = alt_loss[:min_len]
-    print(f"Centralized acc length: {len(c_acc)}")
-    print(f"FedAvg acc length: {len(f_acc)}")
-    print(f"EBM/WCM acc length: {len(alt_acc)}")
+    # print(f"Centralized acc length: {len(c_acc)}")
+    # print(f"FedAvg acc length: {len(f_acc)}")
+    # print(f"EBM/WCM acc length: {len(alt_acc)}")
 
 
     x = list(range(1, min_len + 1))

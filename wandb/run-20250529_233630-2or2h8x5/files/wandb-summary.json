@@ -1,0 +1,1 @@
+{"FedAvg/loss":0.3744477239461347,"_timestamp":1.748576221127102e+09,"_step":149,"centralized/loss":0.25006779325287104,"_wandb":{"runtime":31},"WCM/loss":0.4253957936681422,"epoch":50,"WCM/accuracy":0.8356428571428571,"Centralized/train_accuracy":0.85025,"_runtime":31.059629814,"round":50,"FedAvg/accuracy":0.8490714285714286}
