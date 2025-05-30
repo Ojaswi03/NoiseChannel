@@ -15,10 +15,25 @@ def compute_gradient(w, X, y, lambd):
     grad = -np.mean((active * y)[:, np.newaxis] * X, axis=0) + 2 * lambd * w
     return grad
 
+# def compute_ebm_gradient(w, X, y, lambd, sigma):
+#     grad = compute_gradient(w, X, y, lambd)
+#     reg = 2 * sigma**2 * grad
+#     return grad + reg
+
 def compute_ebm_gradient(w, X, y, lambd, sigma):
-    grad = compute_gradient(w, X, y, lambd)
-    reg = 2 * sigma**2 * grad
-    return grad + reg
+    #loss without mean becasue mean means expectation which we dont want rigth now
+    margins = 1 - y * (X @ w)
+    loss = np.mean(np.maximum(0, margins)) + lambd * np.sum(w**2)
+    #taking norm^2 of loss 
+    loss_norm = np.linalg.norm(loss)**2
+    #Ecpectation loss
+    expectation_loss = np.mean(loss_norm)
+    #active samples 
+    active = margins > 0
+    # without mean because we want the full gradient
+    grad = -np.sum((active * y)[:, np.newaxis] * X, axis=0) + 2 * lambd * w
+    reg =  sigma**2 * np.linalg(grad * loss)**2
+    return expectation_loss + reg
 
 def local_update(X, y, w_global, lr, lambd, sigma):
     grad = compute_ebm_gradient(w_global, X, y, lambd, sigma)
