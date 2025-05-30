@@ -17,7 +17,7 @@ def compute_gradient(w, X, y, lambd):
 
 def compute_ebm_gradient(w, X, y, lambd, sigma):
     grad = compute_gradient(w, X, y, lambd)
-    reg = 2 * sigma**2 * grad  # ∇(||∇F_j(w)||²) ≈ 2 * grad * ∇F_j(w)
+    reg = 2 * sigma**2 * grad
     return grad + reg
 
 def local_update(X, y, w_global, lr, lambd, sigma):
