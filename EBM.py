@@ -7,33 +7,34 @@ import wandb
 
 def hinge_loss(w, X, y, lambd):
     margins = 1 - y * (X @ w)
-    return np.mean(np.maximum(0, margins)) + lambd * np.sum(w**2)
+    hinges = np.maximum(0, margins)
+    return np.mean(hinges) + lambd * np.linalg.norm(w) ** 2
 
 def compute_gradient(w, X, y, lambd):
     margins = 1 - y * (X @ w)
     active = margins > 0
-    grad = -np.mean((active * y)[:, np.newaxis] * X, axis=0) + 2 * lambd * w
+    grad = -np.mean((active * y)[:, np.newaxis] * X, axis=0) + lambd * w
     return grad
 
-# def compute_ebm_gradient(w, X, y, lambd, sigma):
-#     grad = compute_gradient(w, X, y, lambd)
-#     reg = 2 * sigma**2 * grad
-#     return grad + reg
-
 def compute_ebm_gradient(w, X, y, lambd, sigma):
-    #loss without mean becasue mean means expectation which we dont want rigth now
     margins = 1 - y * (X @ w)
-    loss = np.mean(np.maximum(0, margins)) + lambd * np.sum(w**2)
-    #taking norm^2 of loss 
-    loss_norm = np.linalg.norm(loss)**2
-    #Ecpectation loss
-    expectation_loss = np.mean(loss_norm)
-    #active samples 
+    hinges = np.maximum(0, margins)
     active = margins > 0
-    # without mean because we want the full gradient
-    grad = -np.sum((active * y)[:, np.newaxis] * X, axis=0) + 2 * lambd * w
-    reg =  sigma**2 * np.linalg(grad * loss)**2
-    return expectation_loss + reg
+
+    # Gradient of empirical loss
+    # Grad F_j(w) whereF_j(w) is loss function for client j
+    grad = -np.mean((active * y)[:, np.newaxis] * X, axis=0) + lambd * w
+
+    # E ||F_j(w)||^2
+    norm_loss_squared = np.mean(hinges ** 2)
+
+    # ||Grad F_j(w)||^2
+    grad_norm_squared = np.linalg.norm(grad) ** 2
+
+    # Eq. (14): penalty * gradient direction
+    penalty = norm_loss_squared + sigma**2 * grad_norm_squared
+    return penalty
+
 
 def local_update(X, y, w_global, lr, lambd, sigma):
     grad = compute_ebm_gradient(w_global, X, y, lambd, sigma)
@@ -44,21 +45,6 @@ def aggregate_weights(weights, sizes):
     return sum(w * (sz / total) for w, sz in zip(weights, sizes))
 
 def ebm_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=0.1, binary=True):
-    """
-    Expectation-Based Model training for Federated Learning.
-
-    Args:
-        num_clients (int): Number of clients.
-        num_rounds (int): Number of communication rounds.
-        lr (float): Learning rate.
-        lambd (float): L2 regularization parameter.
-        sigma (float): Noise level for EBM regularization.
-        binary (bool): Whether to do even-vs-odd binary MNIST classification.
-
-    Returns:
-        w_global: Final model weights.
-        accs, losses: Lists of accuracy and loss per round.
-    """
     print("[INFO] Loading data...")
     X_train, X_test, y_train, y_test = load_mnist(binary=binary)
     y_train_bin = 2 * y_train - 1
@@ -67,7 +53,6 @@ def ebm_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=0.1, b
     n_samples, n_features = X_train.shape
     w_global = np.zeros(n_features)
 
-    # IID partition
     indices = np.random.permutation(n_samples)
     splits_X = np.array_split(X_train[indices], num_clients)
     splits_y = np.array_split(y_train_bin[indices], num_clients)
@@ -85,7 +70,6 @@ def ebm_training(num_clients=5, num_rounds=20, lr=0.01, lambd=0.01, sigma=0.1, b
 
         w_global = aggregate_weights(local_weights, sizes)
 
-        # Evaluate
         preds = np.sign(X_test @ w_global)
         acc = accuracy_score(y_test_bin, preds)
         loss = hinge_loss(w_global, X_train, y_train_bin, lambd)
